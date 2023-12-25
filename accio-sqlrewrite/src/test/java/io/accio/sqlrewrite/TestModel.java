@@ -124,7 +124,8 @@ public class TestModel
                 column("orders", "Orders", "OrdersCustomer", true),
                 caluclatedColumn("totalprice", BIGINT, "sum(orders.totalprice)"),
                 caluclatedColumn("buy_item_count", BIGINT, "count(distinct orders.lineitem.orderkey_linenumber)"),
-                caluclatedColumn("lineitem_totalprice", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"));
+                caluclatedColumn("lineitem_totalprice", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"),
+                caluclatedColumn("test_col", BIGINT, "sum(orders.lineitem.discount * nationkey)"));
         Manifest manifest = withDefaultCatalogSchema()
                 .setModels(List.of(newCustomer, orders, lineitem))
                 .setRelationships(List.of(ordersCustomer, ordersLineitem))
@@ -144,6 +145,14 @@ public class TestModel
         assertQuery(mdl,
                 "SELECT custkey, lineitem_totalprice FROM Customer WHERE custkey = 370",
                 "SELECT c.custkey, sum(l.extendedprice * l.discount) FROM customer c " +
+                        "LEFT JOIN orders o ON c.custkey = o.custkey " +
+                        "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
+                        "WHERE c.custkey = 370 " +
+                        "GROUP BY 1");
+
+        assertQuery(mdl,
+                "SELECT custkey, test_col FROM Customer WHERE custkey = 370",
+                "SELECT c.custkey, sum(l.discount * c.nationkey) FROM customer c " +
                         "LEFT JOIN orders o ON c.custkey = o.custkey " +
                         "LEFT JOIN lineitem l ON o.orderkey = l.orderkey " +
                         "WHERE c.custkey = 370 " +
