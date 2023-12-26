@@ -14,6 +14,7 @@
 
 package io.accio.sqlrewrite;
 
+import com.google.common.collect.ImmutableList;
 import io.accio.base.AccioMDL;
 import io.accio.base.SessionContext;
 import io.accio.base.dto.Manifest;
@@ -34,6 +35,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.Model.model;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.sqlrewrite.AccioSqlRewrite.ACCIO_SQL_REWRITE;
 import static java.util.Objects.requireNonNull;
@@ -226,6 +228,30 @@ public class TestModel
                 .doesNotThrowAnyException();
         assertThatCode(() -> query(rewrite("SELECT customer_name, total_price FROM Customer c LEFT JOIN Orders o ON c.custkey = o.custkey", mdl, true)))
                 .hasMessageMatching("found cycle in .*");
+    }
+
+    @Test
+    public void testModelOnModel()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("totalprice", BIGINT, "sum(orders.totalprice)"));
+        Model onCustomer = onBaseObject(
+                "OnCustomer",
+                "Customer",
+                ImmutableList.of(
+                        column("mom_custkey", "VARCHAR", null, true, "custkey"),
+                        column("mom_totalprice", "VARCHAR", null, true, "totalprice")),
+                "mom_custkey");
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(newCustomer, onCustomer, orders))
+                .setRelationships(List.of(ordersCustomer))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+
+        assertThatCode(() -> query(rewrite("SELECT * FROM OnCustomer", mdl, true)))
+                .doesNotThrowAnyException();
     }
 
     private void assertQuery(AccioMDL mdl, @Language("SQL") String accioSql, @Language("SQL") String duckDBSql)

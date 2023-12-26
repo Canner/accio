@@ -35,6 +35,7 @@ import static io.accio.base.dto.Column.column;
 import static io.accio.base.dto.JoinType.MANY_TO_ONE;
 import static io.accio.base.dto.JoinType.ONE_TO_MANY;
 import static io.accio.base.dto.Model.model;
+import static io.accio.base.dto.Model.onBaseObject;
 import static io.accio.base.dto.Relationship.relationship;
 import static io.accio.testing.AbstractTestFramework.addColumnsToModel;
 import static io.accio.testing.AbstractTestFramework.withDefaultCatalogSchema;
@@ -194,6 +195,46 @@ public class TestAccioDataLineage
         expected.put("Customer", Set.of("custkey", "total_price"));
         expected.put("Orders", Set.of("custkey", "orderkey", "totalprice"));
         expected.put("Lineitem", Set.of("extendedprice", "orderkey"));
+        assertThat(actual).isEqualTo(expected);
+    }
+
+    @Test
+    public void testAnalyzeModelOnModel()
+    {
+        Model newCustomer = addColumnsToModel(
+                customer,
+                column("orders", "Orders", "OrdersCustomer", true),
+                caluclatedColumn("total_price", BIGINT, "sum(orders.totalprice)"));
+        Model onCustomer = onBaseObject(
+                "OnCustomer",
+                "Customer",
+                ImmutableList.of(
+                        column("mom_custkey", "VARCHAR", null, true, "custkey"),
+                        column("mom_totalprice", "VARCHAR", null, true, "total_price")),
+                "mom_custkey");
+//                caluclatedColumn("discount_extended_price", BIGINT, "sum(orders.lineitem.discount + orders.extended_price)"),
+//                caluclatedColumn("lineitem_price", BIGINT, "sum(orders.lineitem.discount * orders.lineitem.extendedprice)"));
+//        Model newOrders = addColumnsToModel(
+//                orders,
+//                column("customer", "Customer", "OrdersCustomer", true),
+//                column("lineitem", "Lineitem", "OrdersLineitem", true),
+//                caluclatedColumn("customer_name", BIGINT, "customer.name"),
+//                caluclatedColumn("extended_price", BIGINT, "sum(lineitem.extendedprice)"));
+        Manifest manifest = withDefaultCatalogSchema()
+                .setModels(List.of(orders, newCustomer, onCustomer))
+                .setRelationships(List.of(ordersCustomer))
+                .build();
+        AccioMDL mdl = AccioMDL.fromManifest(manifest);
+        AccioDataLineage dataLineage = AccioDataLineage.analyze(mdl);
+
+        LinkedHashMap<String, Set<String>> actual;
+        LinkedHashMap<String, Set<String>> expected;
+
+        actual = dataLineage.getRequiredFields(QualifiedName.of("OnCustomer", "mom_totalprice"));
+        expected = new LinkedHashMap<>();
+        expected.put("Orders", Set.of("custkey", "totalprice"));
+        expected.put("Customer", Set.of("total_price"));
+        expected.put("OnCustomer", Set.of("mom_totalprice"));
         assertThat(actual).isEqualTo(expected);
     }
 }
