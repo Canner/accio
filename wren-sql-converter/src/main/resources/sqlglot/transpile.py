@@ -10,8 +10,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import sqlglot
 import sys
+
+import sqlglot
 
 statement = sys.argv[1]
 read = sys.argv[2]
@@ -19,5 +20,6 @@ write = sys.argv[3]
 
 transpiled = sqlglot.transpile(statement, read=read, write=write)[0]
 
+print("Transpiled Result")
 print(transpiled)
 

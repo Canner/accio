@@ -80,7 +80,7 @@ public class SQLGlot
         }
 
         List<String> results = readProcessOutput(process.getInputStream());
-        return results.get(0);
+        return getResult(results);
     }
 
     private static String resolvePath(String path)
@@ -100,5 +100,15 @@ public class SQLGlot
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static String getResult(List<String> results)
+    {
+        for (int i = 0; i < results.size(); i++) {
+            if ("Transpiled Result".equals(results.get(i))) {
+                return results.get(i + 1);
+            }
+        }
+        throw new RuntimeException("Transpiled Result not found");
     }
 }
