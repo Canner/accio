@@ -73,6 +73,6 @@ public class TestSQLGlot
                 .setWriteDialect(SQLGlot.Dialect.DUCKDB.getDialect())
                 .build();
         assertThat(sqlGlotConverter.convert("SELECT ARRAY[1,2,3][1]", sessionContext))
-                .isEqualTo("SELECT array_value(1, 2, 3)[1]");
+                .isEqualTo("SELECT ([1, 2, 3])[1]");
     }
 }
