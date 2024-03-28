@@ -21,6 +21,8 @@ import io.wren.base.sql.SqlConverter;
 import io.wren.main.connector.bigquery.BigQuerySqlConverter;
 import io.wren.main.connector.duckdb.DuckDBSqlConverter;
 import io.wren.main.connector.postgres.PostgresSqlConverter;
+import io.wren.sqlglot.converter.SQLGlotConverter;
+import io.wren.sqlglot.glot.SQLGlot;
 
 import javax.inject.Inject;
 
@@ -32,6 +34,7 @@ public final class SqlConverterManager
     private final BigQuerySqlConverter bigQuerySqlConverter;
     private final PostgresSqlConverter postgresSqlConverter;
     private final DuckDBSqlConverter duckDBSqlConverter;
+    private final SqlConverter snowflakeSqlConverter;
     private final ConfigManager configManager;
     private WrenConfig.DataSourceType dataSourceType;
     private SqlConverter delegate;
@@ -47,6 +50,7 @@ public final class SqlConverterManager
         this.bigQuerySqlConverter = requireNonNull(bigQuerySqlConverter, "bigQuerySqlConverter is null");
         this.postgresSqlConverter = requireNonNull(postgresSqlConverter, "postgresSqlConverter is null");
         this.duckDBSqlConverter = requireNonNull(duckDBSqlConverter, "duckDBSqlConverter is null");
+        this.snowflakeSqlConverter = SQLGlotConverter.builder().setWriteDialect(SQLGlot.Dialect.SNOWFLAKE).build();
         this.dataSourceType = requireNonNull(configManager.getConfig(WrenConfig.class).getDataSourceType(), "dataSourceType is null");
         changeDelegate(dataSourceType);
     }
@@ -62,6 +66,9 @@ public final class SqlConverterManager
                 break;
             case DUCKDB:
                 delegate = duckDBSqlConverter;
+                break;
+            case SNOWFLAKE:
+                delegate = snowflakeSqlConverter;
                 break;
             default:
                 throw new UnsupportedOperationException("Unsupported data source type: " + dataSourceType);
